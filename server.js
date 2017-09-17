@@ -6,23 +6,51 @@ const WebpackDevServer = require('webpack-dev-server');
 const config = require('./webpack.config');
 const open = require('open');
 
+const express = require('express')
+const http = require('http')
+const engine = require('socket.io')
+const request = require('request')
+
+const port = 3000
+const app = express();
+
+let server = http.createServer(app).listen(port, () =>{
+  console.log('port listening in '+ port)
+})
+
+const io = engine.listen(server)
+
+io.on('connection', (socket) => {
+
+  request('https://randomuser.me/api/', (err, res, body) =>{
+    io.emit('people', body);
+  })
+
+  socket.on('ask', (ask) => {
+    request('https://randomuser.me/api/', (err, res, body) =>{
+      io.emit('people', body);
+    })
+  })
+
+})
+
 /**
  * Flag indicating whether webpack compiled for the first time.
  * @type {boolean}
  */
-let isInitialCompilation = true;
+ let isInitialCompilation = true;
 
-const compiler = webpack(config);
+ const compiler = webpack(config);
 
-new WebpackDevServer(compiler, config.devServer)
-.listen(config.port, 'localhost', (err) => {
+ new WebpackDevServer(compiler, config.devServer)
+ .listen(config.port, 'localhost', (err) => {
   if (err) {
     console.log(err);
   }
   console.log('Listening at localhost:' + config.port);
 });
 
-compiler.plugin('done', () => {
+ compiler.plugin('done', () => {
   if (isInitialCompilation) {
     // Ensures that we log after webpack printed its stats (is there a better way?)
     setTimeout(() => {
